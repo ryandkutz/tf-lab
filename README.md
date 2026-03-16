@@ -21,7 +21,7 @@ This repository provides a practical blueprint for managing infrastructure with 
 * **Scalable `infrastructure-live` Structure:** Organizes infrastructure logically by account and region, providing a proven foundation adaptable to growing complexity.
 * **Best-Practice Separation:** Clearly separates environment-specific "live" configurations (this repo) from reusable infrastructure patterns (via an `infrastructure-catalog`).
 * **DRY Configuration:** Reduces code duplication using hierarchical configuration files (`root.hcl`, `account.hcl`, `region.hcl`).
-* **Concrete End-to-End Example:** Deploys a sample stateful web application (ASG, ALB, MySQL) across distinct production and non-production environments.
+* **Concrete End-to-End Example:** Deploys a sample stateful serverless application (Lambda, DynamoDB) across distinct production and non-production environments.
 * **Reproducible Tooling:** Includes `mise` configuration for easy installation of pinned versions of Terragrunt and OpenTofu/Terraform.
 
 ## Getting Started
@@ -89,12 +89,11 @@ This repository contains the following:
 
 - `terragrunt.stack.hcl` files: These files define a stack of Terragrunt units.
 
-  Both the `terragrunt.stack.hcl` files in this repository provision the units required for a stateful ASG service, including:
+  Both the `terragrunt.stack.hcl` files in this repository provision the units required for a stateful Lambda service, including:
 
-  - EC2 Auto Scaling Group (ASG)
-  - Application Load Balancer (ALB)
-  - Security Groups (SGs)
-  - MySQL Database (DB)
+  - AWS Lambda Function
+  - DynamoDB Table
+  - IAM Role
 
   The configurations for these resources aren't defined in this repository, but are instead defined in the [terragrunt-infrastructure-catalog-example](https://github.com/gruntwork-io/terragrunt-infrastructure-catalog-example) repository.
 
@@ -152,7 +151,7 @@ Before you start provisioning the infrastructure in this repository, you'll want
    e.g.
 
    ```bash
-   cd non-prod/us-east-1/stateful-ec2-asg-service
+   cd non-prod/us-east-1/stateful-lambda-service
    ```
 
 2. Run the following to generate the relevant units for the stack, and run a plan against them.
@@ -202,24 +201,20 @@ If you'd like to interact with the infrastructure that was just provisioned, you
 1. Get the output values for the stack that you just provisioned.
 
    ```bash
-   $ cd non-prod/us-east-1/stateful-ec2-asg-service
+   $ cd non-prod/us-east-1/stateful-lambda-service
    $ terragrunt stack output
-   service = {
-     alb_dns_name          = "stateful-asg-service-XXXXXXXXXX.us-east-1.elb.amazonaws.com"
-     alb_security_group_id = "sg-XXXXXXXXXXXX"
-     asg_name              = "terraform-XXXXXXXXXXXXXXXXXXXXXXXX"
-     asg_security_group_id = "sg-XXXXXXXXXXXX"
-     url                   = "http://stateful-asg-service-XXXXXXXXXX.us-east-1.elb.amazonaws.com:80"
-   }
-   sg_to_db_sg_rule = null
-   asg_sg = {
-     id = "sg-XXXXXXXXXXXX"
+   lambda_service = {
+     function_name = "stateful-lambda-service-dev"
+     function_arn  = "arn:aws:lambda:us-east-1:XXXXXXXXXXXX:function:stateful-lambda-service-dev"
+     invoke_url    = "https://XXXXXXXXXX.execute-api.us-east-1.amazonaws.com"
    }
    db = {
-     arn                  = "arn:aws:rds:us-east-1:XXXXXXXXXXXX:db:terraform-XXXXXXXXXXXXXXXXXXXXXXXX"
-     db_name              = "statefulasgservicedb"
-     db_security_group_id = "sg-XXXXXXXXXXXX"
-     endpoint             = "terraform-XXXXXXXXXXXXXXXXXXXXXXXX.XXXXXXXXXXXX.us-east-1.rds.amazonaws.com:3306"
+     table_name = "stateful-lambda-service-dev-db"
+     table_arn  = "arn:aws:dynamodb:us-east-1:XXXXXXXXXXXX:table/stateful-lambda-service-dev-db"
+   }
+   role = {
+     role_name = "stateful-lambda-service-dev-role"
+     role_arn  = "arn:aws:iam::XXXXXXXXXXXX:role/stateful-lambda-service-dev-role"
    }
    ```
 
@@ -253,7 +248,7 @@ Where:
 
 - `account` is the AWS account being managed (e.g. `non-prod`, `prod`, `mgmt`).
 - `region` is the AWS region being managed (e.g. `us-east-1`).
-- `resources` are the resources being managed (e.g. `stateful-ec2-asg-service`).
+- `resources` are the resources being managed (e.g. `stateful-lambda-service`).
 
 This structure is geared towards exclusive management of infrastructure in AWS, but can be adapted to other cloud providers, etc. by adjusting the hierarchy according to the patterns of the platform.
 
@@ -302,17 +297,17 @@ The `terragrunt.stack.hcl` file is used to define configurations for a stack of 
 
 Using the `values` attribute of [stack](https://terragrunt.gruntwork.io/docs/reference/config-blocks-and-attributes/#stack) and [unit](https://terragrunt.gruntwork.io/docs/reference/config-blocks-and-attributes/#unit) configuration blocks allows you to pass down configuration to units with granular control.
 
-For example, consider this portion of the [prod/us-east-1/stateful-ec2-asg-service/terragrunt.stack.hcl](prod/us-east-1/stateful-ec2-asg-service/terragrunt.stack.hcl) file:
+For example, consider this portion of the [prod/us-east-1/stateful-lambda-service/terragrunt.stack.hcl](prod/us-east-1/stateful-lambda-service/terragrunt.stack.hcl) file:
 
 ```hcl
-unit "service" {
+unit "lambda_service" {
   // You'll typically want to pin this to a particular version of your catalog repository.
   // e.g.
-  // source = "github.com/acme/terragrunt-infrastructure-catalog//units/ec2-asg-stateful-service?ref=v0.1.0"
+  // source = "github.com/acme/terragrunt-infrastructure-catalog//units/lambda-stateful-service?ref=v0.1.0"
   //
   // If you are using a private catalog, you may want to use an SSH source URL instead:
-  // source = "git::git@github.com:acme/terragrunt-infrastructure-catalog.git//units/ec2-asg-stateful-service"
-  source = "github.com/gruntwork-io/terragrunt-infrastructure-catalog-example//units/ec2-asg-stateful-service"
+  // source = "git::git@github.com:acme/terragrunt-infrastructure-catalog.git//units/lambda-stateful-service"
+  source = "github.com/gruntwork-io/terragrunt-infrastructure-catalog-example//units/lambda-stateful-service"
 
   path = "service"
 
@@ -321,25 +316,26 @@ unit "service" {
     // to use when fetching the OpenTofu/Terraform module.
     version = "main"
 
-    name          = local.name
-    instance_type = "t4g.micro"
-    min_size      = 2
-    max_size      = 4
-    server_port   = 3000
-    alb_port      = 80
+    name = local.name
 
-    db_path     = "../db"
-    asg_sg_path = "../sgs/asg"
+    // Required inputs
+    runtime    = "provided.al2023"
+    source_dir = "./src"
+    handler    = "bootstrap"
+    zip_file   = "handler.zip"
 
-    // This is used for the userdata script that
-    // bootstraps the EC2 instances.
-    db_username = local.db_username
-    db_password = local.db_password
+    // Optional inputs
+    memory  = 128
+    timeout = 3
+
+    // Dependency paths
+    role_path           = "../roles/lambda-iam-role-to-dynamodb"
+    dynamodb_table_path = "../db"
   }
 }
 ```
 
-Here, you can see that the `values` attribute is setting exactly the values that are unique to the `service` unit in the context of the `stateful-ec2-asg-service` stack, including the `version` of the OpenTofu module it uses, and the relative paths to the dependencies it relies on (e.g. the `db` and `asg_sg` units).
+Here, you can see that the `values` attribute is setting exactly the values that are unique to the `lambda_service` unit in the context of the `stateful-lambda-service` stack, including the `version` of the OpenTofu module it uses, and the relative paths to the dependencies it relies on (e.g. the `db` and `role` units).
 
 ## What to do with `.terraform.lock.hcl` files
 
