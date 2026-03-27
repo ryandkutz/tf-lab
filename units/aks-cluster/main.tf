@@ -19,5 +19,12 @@ resource "azurerm_kubernetes_cluster" "this" {
     name       = "default"
     node_count = var.node_count
     vm_size    = var.node_pool_vm_size
+
+    # Azure sets these defaults on the node pool automatically. Declaring them
+    # here prevents Terraform from detecting drift and trying to remove them
+    # on subsequent applies (which would fail in restricted sandboxes).
+    upgrade_settings {
+      max_surge = "10%"
+    }
   }
 }
