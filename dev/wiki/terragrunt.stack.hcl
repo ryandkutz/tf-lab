@@ -25,9 +25,8 @@ unit "cae" {
   source = "${get_repo_root()}/units/container-app-environment"
   path = "container-app-environment"
   values = {
-    name = "${local.stack_name}-cae"
+    name = "container-app-env"
     resource_group_name = local.resource_group_name
     location = local.azure_region
-    log_analytics_workspace_id = unit.law.outputs.id
   }
 }

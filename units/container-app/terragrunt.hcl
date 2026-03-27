@@ -4,7 +4,10 @@ include "root" {
 }
 
 dependency "cae" {
-  config_path = values.cae_unit_path
+  config_path = "../container-app-environment"
+  mock_outputs = {
+    id = "/subscriptions/12345678-1234-9876-4563-123456789012/resourceGroups/example-resource-group/providers/Microsoft.OperationalInsights/workspaces/workspaceName"
+  }
 }
 
 inputs = {

@@ -42,3 +42,7 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "container_app_environment_id" {
+  type = string
+}

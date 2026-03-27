@@ -18,3 +18,23 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "logs_destination" {
+  type = string
+  default = "log-analytics"
+}
+
+variable "log_analytics_workspace_id" {
+  type = string
+}
+
+variable "workload_profile" {
+  type = object({
+    name = string
+    workload_profile_type = string
+  })
+  default = {
+    name = "Consumption"
+    workload_profile_type = "Consumption"
+  }
+}

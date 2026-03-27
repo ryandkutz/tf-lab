@@ -4,7 +4,11 @@ include "root" {
 }
 
 dependency "law" {
-  config_path = values.law_unit_path
+  config_path = "../log-analytics-workspace"
+
+ mock_outputs = {
+   id = "/subscriptions/12345678-1234-9876-4563-123456789012/resourceGroups/example-resource-group/providers/Microsoft.OperationalInsights/workspaces/workspaceName"
+ }
 }
 
 inputs = {

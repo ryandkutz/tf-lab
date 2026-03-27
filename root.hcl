@@ -61,9 +61,9 @@ locals {
   #   TF_BACKEND_RESOURCE_GROUP  — defaults to rg-tfstate-<env>
   #                                 (dev overrides this to the predefined sandbox RG)
   #   TF_BACKEND_CONTAINER       — defaults to "tfstate"
-  backend_resource_group  = get_env("TF_BACKEND_RESOURCE_GROUP", "rg-tfstate-${local.environment_name}")
+  backend_resource_group  = "rg-tfstate-${local.environment_name}"
   backend_storage_account = get_env("TF_BACKEND_STORAGE_ACCOUNT")
-  backend_container       = get_env("TF_BACKEND_CONTAINER", "tfstate")
+  backend_container       = "tfstate"
 }
 
 # Generates provider.tf in every unit's working directory.
